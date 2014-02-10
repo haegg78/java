@@ -6,14 +6,24 @@ import java.util.Locale;
 
 public class Download {
 	   public static void main(String[] args) throws IOException, DbxException {
-		   DbxClient client = Authorize.validate("haegg78");
-		   System.out.println("Linked account: " + client.getAccountInfo().displayName);
+		   DbxClient client = Authorize.validate("haegg78", false);
+		   try
+		   {
+			   System.out.println("Linked account: " + client.getAccountInfo().displayName);
+		   }
+		   catch (DbxException dbxe)
+		   {
+			   if (dbxe.getMessage().contains("401"))
+			   {
+				   System.out.println("Inside download.java");
+				   dbxe.printStackTrace();
+				   client = Authorize.validate("haegg78", true);
+				   System.out.println("Linked account: " + client.getAccountInfo().displayName);
+			   }
+		   }
 		   //String accessT = Authorize.validate("haegg78");
 		   //System.out.println("AccessToken: " + accessT);
 		   
-	        // Get your app key and secret from the Dropbox developers website.
-	        final String APP_KEY = "q66p3ueua0sny1g";
-	        final String APP_SECRET = "sofxbwuenbl563n";
 	        /*
 
 	        File inputFile = new File("/tmp/working-draft.txt");

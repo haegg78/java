@@ -1,11 +1,13 @@
 package com.eklind.dropboxSyncer;
 import com.dropbox.core.*;
 import com.eklind.dropboxSyncer.Authorize;
+
 import java.io.*;
+import java.sql.SQLException;
 import java.util.Locale;
 
 public class Download {
-	   public static void main(String[] args) throws IOException, DbxException {
+	   public static void main(String[] args) throws IOException, DbxException, ClassNotFoundException, SQLException {
 		   DbxClient client = Authorize.validate("haegg78", false);
 		   try
 		   {

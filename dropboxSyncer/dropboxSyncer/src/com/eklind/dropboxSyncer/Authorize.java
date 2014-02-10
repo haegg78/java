@@ -1,8 +1,15 @@
 package com.eklind.dropboxSyncer;
 
 import com.dropbox.core.*;
+import com.sun.org.apache.xml.internal.security.exceptions.Base64DecodingException;
+import com.sun.org.apache.xml.internal.security.utils.Base64;
+
 import java.io.*;
+import java.sql.*;
+import java.util.Arrays;
 import java.util.Locale;
+
+import org.sqlite.*;
 
 
 public class Authorize {
@@ -27,67 +34,147 @@ public class Authorize {
         String accessToken = authFinish.accessToken;
         return accessToken;
 	}
-	public static DbxClient validate(String dropboxUser, Boolean authenticate) throws IOException, DbxException {
+	private static void checkDB(Connection conn, String dropboxUser) throws SQLException{
+		Boolean tableExist = false;
+		ResultSet rs = null;
+		Statement stmt = conn.createStatement();
+		String sql = "SELECT ACCESSTOKEN FROM DROPBOXACCESSTOKENS where user='" + dropboxUser + "';";
+		try
+		{
+			conn.setAutoCommit(false);
+			rs = stmt.executeQuery(sql);
+			tableExist = true;
+		}
+		catch (SQLException sqle)
+		{
+			if (sqle.getMessage().contains("no such table: DROPBOXACCESSTOKENS"))
+			{
+				System.out.println("Inside table not found");
+				sqle.printStackTrace();
+				sql = "CREATE TABLE DROPBOXACCESSTOKENS "
+						+ "(USER TEXT PRIMARY KEY NOT NULL,"
+						+ "ACCESSTOKEN TEXT NOT NULL)";
+				stmt.executeUpdate(sql);
+				conn.commit();
+			}
+		}
+		finally
+		{
+			if (rs != null)
+			{
+				rs.close();
+			}
+			if (stmt != null)
+			{
+				stmt.close();
+			}
+		}
+	}
+	private static String getAccessToken(Connection conn, String dropboxUser) throws Base64DecodingException, SQLException {
+		String accessToken = "";
+		ResultSet rs = null;
+		Statement stmt = conn.createStatement();
+		String sql = "SELECT ACCESSTOKEN FROM DROPBOXACCESSTOKENS WHERE USER='" + dropboxUser + "';";
+		try
+		{
+			rs = stmt.executeQuery(sql);
+			while (rs.next())
+			{
+				accessToken = rs.getString(1);
+				accessToken = new String(Base64.decode(accessToken));
+				System.out.println("Returning accessToken: " + accessToken);
+			}
+		}
+		catch (SQLException sqle)
+		{
+			sqle.printStackTrace();
+		}
+		finally
+		{
+			if (rs != null)
+			{
+				rs.close();
+			}
+			if (stmt != null)
+			{
+				stmt.close();
+			}
+		}
+		return accessToken;
+	}
+	private static void insertUpdateAccessToken(Connection conn, String dropboxUser, String accessToken, Boolean authenticate) throws SQLException {
+		Statement stmt = conn.createStatement();
+		String sql = "";
+		try
+		{
+			conn.setAutoCommit(false);
+			if (authenticate)
+			{
+				accessToken = Base64.encode(accessToken.getBytes());
+				// Update the already existing entry
+				sql = "UPDATE DROPBOXACCESSTOKENS set ACCESSTOKEN='" + accessToken + "' WHERE USER='" + dropboxUser + "';";
+				stmt.executeUpdate(sql);
+				conn.commit();
+			}
+			else
+			{
+				accessToken = Base64.encode(accessToken.getBytes());
+				// Normal handling of just inserting the entry
+				sql = "INSERT INTO DROPBOXACCESSTOKENS VALUES('" + dropboxUser + "','" + accessToken + "');";
+				stmt.executeUpdate(sql);
+				conn.commit();
+			}
+		}
+		catch (SQLException sqle)
+		{
+			sqle.printStackTrace();
+		}
+		finally
+		{
+			if (stmt != null)
+			{
+				stmt.close();
+			}
+		}
+	}
+	public static DbxClient validate(String dropboxUser, Boolean authenticate) throws ClassNotFoundException, SQLException, IOException, DbxException {
         DbxClient client = null;
         String line = "";
         System.out.println(System.getProperty("user.home"));
-        String filePath = System.getProperty("user.home") + File.separator + ".portableSyncer/dbAuthorityFile";
-        //String filePath = "/tmp/dbAuthorityFile";
+        String dbPath = System.getProperty("user.home") + File.separator + ".portableSyncer/dbAuthorityFile.db";
         String accessToken = "";
         String [] accessTokens = null;
         Boolean entryFound = false;
         BufferedReader bf = null;
-        FileWriter fw = null;
+        Connection conn = null;
         DbxRequestConfig config = new DbxRequestConfig("JavaTutorial/1.0",
 	            Locale.getDefault().toString());
         // Trying to find user using bf
         try
         {
+        	Class.forName("org.sqlite.JDBC");
+        	conn = DriverManager.getConnection("jdbc:sqlite:" + dbPath);
+        	checkDB(conn, dropboxUser);
         	if (authenticate)
         	{
         		// Force the authentication
             	accessToken = authenticate(config);
     	        // Store entry in the file, we also need to remove the old entry
-    	        fw = new FileWriter(filePath, true);
-    	        fw.write(dropboxUser + ";" + accessToken + "\r\n");
-    	        fw.flush();
+            	insertUpdateAccessToken(conn, dropboxUser, accessToken, authenticate);
         	}
         	else
         	{
-            	try 
+            	accessToken = getAccessToken(conn, dropboxUser);
+            	if (!accessToken.equals(""))
             	{
-            		bf = new BufferedReader(new FileReader(filePath));
+            		entryFound = true;
             	}
-            	catch (IOException ioe)
-            	{
-            		ioe.printStackTrace();
-            		File f = new File(filePath);
-            		f.getParentFile().mkdirs();
-            		f.createNewFile();
-            		bf = new BufferedReader(new FileReader(filePath));
-            	}
-                while ((line = bf.readLine()) != null && (!entryFound))
-                {
-                	if (line.contains(dropboxUser))
-                	{
-                		// Get the accessToken
-                		System.out.println("line: " + line);
-                		accessTokens = line.split(";");
-                		System.out.println("accessTokens size: " + accessTokens.length);
-                		accessToken = accessTokens[1];
-                		entryFound = true;
-                	}
-                }
-                // Close bf
-                bf.close();
                 // Check if token found
                 if (!entryFound)
                 {
                 	accessToken = authenticate(config);
-        	        // Store entry in the file
-        	        fw = new FileWriter(filePath, true);
-        	        fw.write(dropboxUser + ";" + accessToken + "\r\n");
-        	        fw.flush();
+        	        // Store entry in db
+                	insertUpdateAccessToken(conn, dropboxUser, accessToken, authenticate);
                 }
         	}
             // Connect to dropBox
@@ -100,9 +187,9 @@ public class Authorize {
         }
         finally
         {
-        	if (fw != null)
+        	if (conn != null)
         	{
-        		fw.close();
+        		conn.close();
         	}
         }
 		return client;

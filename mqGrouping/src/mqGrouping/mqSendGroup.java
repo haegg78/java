@@ -53,6 +53,7 @@ public class mqSendGroup
 				debugLine("Iteration: " + i);
 				MQMessage message = new MQMessage();
 				message.format = "MQSTR";
+				message.setBooleanProperty("partOfGroup", true);
 				numRead = fin.read(readBuffer);
 				debugLine("Bytes read: " + numRead);
 				content = new String(readBuffer, 0, numRead);

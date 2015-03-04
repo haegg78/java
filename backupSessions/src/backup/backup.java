@@ -15,16 +15,18 @@ public class backup
 	public static void main(String[] args)
 		throws IOException, InterruptedException
 	{
-		if (args.length != 2)
+		if (args.length != 3)
 		{
-			System.out.println("Proper Usage is: java -cp backupSessions.jar backup.backup <Ora Developer Search Path> <Destination Path>");
+			System.out.println("Proper Usage is: java -cp backupSessions.jar backup.backup <Ora Developer Search Path> <WinSCP Ini file> <Destination Path>");
 	        System.exit(1);
 		}
 		String timeStamp = new SimpleDateFormat("yyyyMMdd_hhmmss").format(new Date());
 		System.out.println(timeStamp + "\r\n---- Start of backup ----");
 		String oracleDeveloperSearchPath = args[0];
-		String backupPath = args[1];
+		String backupPath = args[2];
 		String pattern = "connections.xml";
+		File srcFile = null;
+		File destFile = null;
 		// Finding the file in variable pattern and copying to backup
 		Path startingDir = Paths.get(oracleDeveloperSearchPath);
 		Finder finder = new Finder(pattern);
@@ -36,13 +38,20 @@ public class backup
 		while (iterator.hasNext())
 		{
 			//System.out.println(iterator.next());
-			File srcFile = new File(iterator.next());
-			File destFile = new File(backupPath + "/" + srcFile.getName() + "_" + timeStamp);
+			srcFile = new File(iterator.next());
+			destFile = new File(backupPath + "/" + srcFile.getName() + "_" + timeStamp);
 			findFile.FileCopy(srcFile,destFile);
 		}
 		//
 		// Backup Putty sessions using regedit
 		String puttyFile = backupPath + "/putty.reg_" + timeStamp;
 		findFile.backupPutty(puttyFile);
+		//
+		// Backup WinSCP ini file
+		String winscpFile = args[1];
+		String winscpBackupFile = backupPath + "/WinSCP.ini_" + timeStamp;
+		srcFile = new File(winscpFile);
+		destFile = new File(winscpBackupFile);
+		findFile.FileCopy(srcFile,destFile);
 	}
 }

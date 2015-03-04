@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 import backup.findFile.Finder;
@@ -19,6 +20,8 @@ public class backup
 			System.out.println("Proper Usage is: java -cp backupSessions.jar backup.backup <Ora Developer Search Path> <Destination Path>");
 	        System.exit(1);
 		}
+		String timeStamp = new SimpleDateFormat("yyyyMMdd_hhmmss").format(new Date());
+		System.out.println(timeStamp + "\r\n---- Start of backup ----");
 		String oracleDeveloperSearchPath = args[0];
 		String backupPath = args[1];
 		String pattern = "connections.xml";
@@ -34,12 +37,12 @@ public class backup
 		{
 			//System.out.println(iterator.next());
 			File srcFile = new File(iterator.next());
-			File destFile = new File(backupPath + "/" + srcFile.getName());
+			File destFile = new File(backupPath + "/" + srcFile.getName() + "_" + timeStamp);
 			findFile.FileCopy(srcFile,destFile);
 		}
 		//
 		// Backup Putty sessions using regedit
-		String puttyFile = backupPath + "/putty.reg";
+		String puttyFile = backupPath + "/putty.reg_" + timeStamp;
 		findFile.backupPutty(puttyFile);
 	}
 }

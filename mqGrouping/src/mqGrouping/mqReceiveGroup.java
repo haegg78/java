@@ -20,22 +20,39 @@ public class mqReceiveGroup
 	public static void main(String[] args) throws MQException, IOException
 	{
 		
-		String fileString = "H:/Sample Files/telia_cremul.txt_AfterWMQ";
+		String fileString = "";
 		FileOutputStream fos = null;
 		File file;
+		String queueString = "";
+		String qmgrString = "";
 		byte[] contentInBytes;
-		MQEnvironment.hostname = "mqcmds-cmcc.dkd1.root4.net";
-		MQEnvironment.port = 1414;
-		MQEnvironment.channel = "CLIENTS.EBRIDGE";
+		if (arg[0] == "CMDS")
+		{
+			fileString = "H:/Sample Files/telia_cremul.txt_AfterWMQ";
+			queueString = "OPF2EBRIDGE.EBAOUT.REQ";
+			qmgrString = "CMDS";
+			MQEnvironment.hostname = "mqcmds-cmcc.dkd1.root4.net";
+			MQEnvironment.port = 1414;
+			MQEnvironment.channel = "CLIENTS.EBRIDGE";			
+		}
+		else
+		{
+			fileString = "H:/Sample Files/telia_cremul.txt_AfterWMQ";
+			queueString = "OPF2EBRIDGE.EBAOUT.REQ";
+			qmgrString = "";
+			MQEnvironment.hostname = "localhost";
+			MQEnvironment.port = 1414;
+			MQEnvironment.channel = "";			
+		}
 		MQQueueManager qmgr = null;
 		MQQueue queue = null;
 		MQGetMessageOptions gmo = new MQGetMessageOptions();
 		try
 		{
 			debugLine("Before Connect");
-			qmgr = new MQQueueManager("CMDS");
+			qmgr = new MQQueueManager(qmgrString);
 			debugLine("After Connect");
-			queue = qmgr.accessQueue("OPF2EBRIDGE.EBAOUT.REQ",MQConstants.MQOO_INPUT_AS_Q_DEF);
+			queue = qmgr.accessQueue(queueString,MQConstants.MQOO_INPUT_AS_Q_DEF);
 			debugLine("After open queue");
 			gmo.options = MQConstants.MQGMO_LOGICAL_ORDER | MQConstants.MQGMO_ALL_MSGS_AVAILABLE;
 			gmo.matchOptions = MQConstants.MQMO_NONE;

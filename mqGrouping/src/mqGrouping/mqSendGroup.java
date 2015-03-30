@@ -19,17 +19,33 @@ public class mqSendGroup
 	}
 	public static void main(String[] args) throws MQException, IOException
 	{
-		//String fileString = "H:/Sample Files/egmont_bansta.txt";
-		String fileString = "H:/Sample Files/telia_cremul.txt";
+		String fileString = "";
 		FileInputStream fin = null;
 		String content = "";
+		String queueString = "";
+		String qmgrString = "";
 		int splitSize = 4000000;
 		int fileLength;
 		int maxIterations;
 		int numRead;
-		MQEnvironment.hostname = "mqcmds-cmcc.dkd1.root4.net";
-		MQEnvironment.port = 1414;
-		MQEnvironment.channel = "CLIENTS.EBRIDGE";
+		if (arg[0] == "CMDS")
+		{
+			fileString = "H:/Sample Files/telia_cremul.txt";
+			queueString = "OPF2EBRIDGE.EBAOUT.REQ";
+			qmgrString = "CMDS";
+			MQEnvironment.hostname = "mqcmds-cmcc.dkd1.root4.net";
+			MQEnvironment.port = 1414;
+			MQEnvironment.channel = "CLIENTS.EBRIDGE";			
+		}
+		else
+		{
+			fileString = "H:/Sample Files/telia_cremul.txt";
+			queueString = "OPF2EBRIDGE.EBAOUT.REQ";
+			qmgrString = "";
+			MQEnvironment.hostname = "mqcmds-cmcc.dkd1.root4.net";
+			MQEnvironment.port = 1414;
+			MQEnvironment.channel = "CLIENTS.EBRIDGE";			
+		}
 		MQQueueManager qmgr = null;
 		MQQueue queue = null;
 		MQPutMessageOptions pmo = new MQPutMessageOptions();
@@ -37,9 +53,9 @@ public class mqSendGroup
 		try 
 		{
 			debugLine("Before Connect");
-			qmgr = new MQQueueManager("CMDS");
+			qmgr = new MQQueueManager(qmgrString);
 			debugLine("After Connect");
-			queue = qmgr.accessQueue("OPF2EBRIDGE.EBAOUT.REQ",MQConstants.MQOO_OUTPUT);
+			queue = qmgr.accessQueue(queueString,MQConstants.MQOO_OUTPUT);
 			debugLine("After open queue");
 			pmo.options = MQConstants.MQPMO_LOGICAL_ORDER;
 			/* Code for reading file and sending it grouped */

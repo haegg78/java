@@ -14,7 +14,7 @@ public class hmacSeal {
 	        Mac sha256_HMAC = Mac.getInstance("HmacSHA1");
 	        SecretKeySpec secret_key = new SecretKeySpec(secret.getBytes(), "HmacSHA1");
 	        sha256_HMAC.init(secret_key);
-
+	        sha256_HMAC.update(input, offset, len);
 	        String hash = Base64.encodeBase64String(sha256_HMAC.doFinal(message.getBytes()));
 	        System.out.println(hash);
 	       }

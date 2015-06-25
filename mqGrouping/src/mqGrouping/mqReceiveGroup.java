@@ -19,14 +19,13 @@ public class mqReceiveGroup
 	}
 	public static void main(String[] args) throws MQException, IOException
 	{
-		
 		String fileString = "";
 		FileOutputStream fos = null;
 		File file;
 		String queueString = "";
 		String qmgrString = "";
 		byte[] contentInBytes;
-		if (arg[0] == "CMDS")
+		if (args[0] == "CMDS")
 		{
 			fileString = "H:/Sample Files/telia_cremul.txt_AfterWMQ";
 			queueString = "OPF2EBRIDGE.EBAOUT.REQ";
@@ -46,6 +45,7 @@ public class mqReceiveGroup
 		}
 		MQQueueManager qmgr = null;
 		MQQueue queue = null;
+		int iteration = 0;
 		MQGetMessageOptions gmo = new MQGetMessageOptions();
 		try
 		{
@@ -65,11 +65,18 @@ public class mqReceiveGroup
 			MQMessage message = new MQMessage();
 			do 
 			{
+				iteration++;
+				debugLine("Iteration: " + iteration);
 				queue.get(message, gmo);
+				debugLine("After get");
 				int dataLength = message.getDataLength();
 				fos.write(message.readStringOfByteLength(dataLength).getBytes());
 			} while (gmo.groupStatus != MQConstants.MQGS_LAST_MSG_IN_GROUP);
 			fos.flush();
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
 		}
 		finally
 		{

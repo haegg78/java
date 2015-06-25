@@ -9,7 +9,7 @@ import java.util.Date;
 import com.ibm.mq.*;
 import com.ibm.mq.constants.MQConstants;
 
-public class mqSendGroup
+public class mqSend2FilesAsGroup
 {
 	public static void debugLine(String line)
 	{
@@ -19,33 +19,19 @@ public class mqSendGroup
 	}
 	public static void main(String[] args) throws MQException, IOException
 	{
-		String fileString = "";
+		//String fileString = "H:/Sample Files/egmont_bansta.txt";
+		//String fileString = "H:/Sample Files/telia_cremul.txt";
+		String triggerFile = "H:/MyData/_imex_trigger.xml";
+		String payloadFile = "H:/MyData/export.zip";
 		FileInputStream fin = null;
 		String content = "";
-		String queueString = "";
-		String qmgrString = "";
-		int splitSize = 4000000;
+		int splitSize = 1500000;
 		int fileLength;
 		int maxIterations;
 		int numRead;
-		if (args[0] == "CMDS")
-		{
-			fileString = "H:/Sample Files/telia_cremul.txt";
-			queueString = "OPF2EBRIDGE.EBAOUT.REQ";
-			qmgrString = "CMDS";
-			MQEnvironment.hostname = "mqcmds-cmcc.dkd1.root4.net";
-			MQEnvironment.port = 1414;
-			MQEnvironment.channel = "CLIENTS.EBRIDGE";			
-		}
-		else
-		{
-			fileString = "H:/Sample Files/telia_cremul.txt";
-			queueString = "OPF2EBRIDGE.EBAOUT.REQ";
-			qmgrString = "";
-			MQEnvironment.hostname = "mqcmds-cmcc.dkd1.root4.net";
-			MQEnvironment.port = 1414;
-			MQEnvironment.channel = "CLIENTS.EBRIDGE";			
-		}
+		MQEnvironment.hostname = "mqcmds-cmcc.dkd1.root4.net";
+		MQEnvironment.port = 1414;
+		MQEnvironment.channel = "CLIENTS.EBRIDGE";
 		MQQueueManager qmgr = null;
 		MQQueue queue = null;
 		MQPutMessageOptions pmo = new MQPutMessageOptions();
@@ -53,18 +39,41 @@ public class mqSendGroup
 		try 
 		{
 			debugLine("Before Connect");
-			qmgr = new MQQueueManager(qmgrString);
+			qmgr = new MQQueueManager("CMDS");
 			debugLine("After Connect");
-			queue = qmgr.accessQueue(queueString,MQConstants.MQOO_OUTPUT);
+			//queue = qmgr.accessQueue("IMX2WV.FILEACT.MSG",MQConstants.MQOO_OUTPUT);
+			queue = qmgr.accessQueue("WV2IMX.FILEACT.MSG",MQConstants.MQOO_OUTPUT);
 			debugLine("After open queue");
 			pmo.options = MQConstants.MQPMO_LOGICAL_ORDER;
 			/* Code for reading file and sending it grouped */
 			// Access a file and read 
-			File file = new File(fileString);
+			debugLine("Before trigger");
+			File file = new File(triggerFile);
 			fin = new FileInputStream(file);
-			fileLength = (int)file.length();
-			maxIterations = fileLength / splitSize;
-			for (int i = 0; i <= maxIterations; i++)
+			MQMessage message1 = new MQMessage();
+			message1.format = "MQFMT_NONE";
+			message1.setBooleanProperty("partOfGroup", true);
+			numRead = fin.read(readBuffer);
+			debugLine("Bytes read: " + numRead);
+			content = new String(readBuffer, 0, numRead);
+			message1.writeString(content);
+			message1.messageFlags = MQConstants.MQMF_MSG_IN_GROUP;
+			queue.put(message1, pmo);
+			fin.close();
+			debugLine("Before payload");
+			file = new File(payloadFile);
+			fin = new FileInputStream(file);
+			MQMessage message2 = new MQMessage();
+			message2.format = "MQFMT_NONE";
+			message2.setBooleanProperty("partOfGroup", true);
+			numRead = fin.read(readBuffer);
+			debugLine("Bytes read: " + numRead);
+			//content = new String(readBuffer, 0, numRead);
+			message2.write(readBuffer, 0, numRead);
+			//message2.writeString(content);
+			message2.messageFlags = MQConstants.MQMF_LAST_MSG_IN_GROUP;
+			queue.put(message2, pmo);
+			/*for (int i = 0; i <= maxIterations; i++)
 			{
 				debugLine("Iteration: " + i);
 				MQMessage message = new MQMessage();
@@ -84,6 +93,7 @@ public class mqSendGroup
 				}
 				queue.put(message, pmo);
 			}
+			*/
 			// End of sending file code
 			//
 			/* Sample code for sending 5 messages in a group

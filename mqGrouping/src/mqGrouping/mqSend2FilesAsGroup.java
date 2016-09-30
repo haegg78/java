@@ -42,7 +42,7 @@ public class mqSend2FilesAsGroup
 			qmgr = new MQQueueManager("CMDS");
 			debugLine("After Connect");
 			//queue = qmgr.accessQueue("IMX2WV.FILEACT.MSG",MQConstants.MQOO_OUTPUT);
-			queue = qmgr.accessQueue("WV2IMX.FILEACT.MSG",MQConstants.MQOO_OUTPUT);
+			queue = qmgr.accessQueue("EBRIDGE.DUMMY",MQConstants.MQOO_OUTPUT);
 			debugLine("After open queue");
 			pmo.options = MQConstants.MQPMO_LOGICAL_ORDER;
 			/* Code for reading file and sending it grouped */
@@ -51,7 +51,7 @@ public class mqSend2FilesAsGroup
 			File file = new File(triggerFile);
 			fin = new FileInputStream(file);
 			MQMessage message1 = new MQMessage();
-			message1.format = "MQFMT_NONE";
+			message1.format = "MQSTR";
 			message1.setBooleanProperty("partOfGroup", true);
 			numRead = fin.read(readBuffer);
 			debugLine("Bytes read: " + numRead);
@@ -64,7 +64,7 @@ public class mqSend2FilesAsGroup
 			file = new File(payloadFile);
 			fin = new FileInputStream(file);
 			MQMessage message2 = new MQMessage();
-			message2.format = "MQFMT_NONE";
+			message2.format = "";
 			message2.setBooleanProperty("partOfGroup", true);
 			numRead = fin.read(readBuffer);
 			debugLine("Bytes read: " + numRead);
